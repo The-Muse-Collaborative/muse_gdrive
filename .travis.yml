@@ -28,6 +28,5 @@ after_success:
 - if [[ "${TRAVIS_PULL_REQUEST}" != "false" ]]; then echo "PR."; exit 0; fi
 - if [[ "${TRAVIS_BRANCH}" != "master" ]]; then echo "Non-master."; exit 0; fi
 - if [[ "${TRAVIS_PYTHON_VERSION}" != "3.5" ]]; then echo "Non 3.5."; exit 0; fi
-- pip install python-coveralls
 - coveralls
 - make docs-publish
