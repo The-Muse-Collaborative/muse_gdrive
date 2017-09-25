@@ -1,0 +1,99 @@
+#!/usr/bin/env python
+"""Simple python command-line script for Google Drive manipulation."""
+
+import logging
+import json
+
+import click
+import muse_gdrive
+
+
+@click.group()
+@click.pass_context
+@click.option('--conf',
+              default='/etc/automation/conf.json',
+              type=click.Path(exists=True, dir_okay=False),
+              help='The path to the JSON config file used.')
+@click.option('--log-level',
+              default='INFO',
+              type=click.Choice(['DEBUG', 'INFO', 'WARNING', 'ERROR']),
+              help='The lowest level of log messages to display.')
+def cli(ctx, conf, log_level):
+    """Common code for all Google Drive CLI commands. Authenticates to the
+    API, then passes off control to the subcommand."""
+    numeric_log_level = getattr(logging, log_level, None)
+    if not isinstance(numeric_log_level, int):
+        raise ValueError('Invalid log level: {0}'.format(log_level))
+    muse_gdrive.CONSOLE_LOGGER.setLevel(numeric_log_level)
+    muse_gdrive.LOGGER.setLevel(numeric_log_level)
+    with open(conf, 'r') as conf_file:
+        conf_json = json.load(conf_file)
+        secret_file_path = conf_json['google_secret']
+        email_address = conf_json['google_email']
+    ctx.obj['GOOGLE_DRIVE'] = muse_gdrive.connect(secret_file_path,
+                                                  email_address)
+
+
+@click.command()
+@click.pass_context
+@click.argument('path', type=click.Path())
+def make_directory(ctx, path):
+    """Command line interface for making directories. """
+    muse_gdrive.make_directory(ctx.obj['GOOGLE_DRIVE'], path)
+
+
+@click.command()
+@click.pass_context
+@click.argument('source', type=click.Path(exists=True))
+@click.argument('dest', type=click.Path())
+def upload(ctx, source, dest):
+    """Command line interface for uploading files."""
+    muse_gdrive.upload(ctx.obj['GOOGLE_DRIVE'], source, dest)
+
+
+@click.command()
+@click.pass_context
+@click.argument('source', type=click.Path())
+@click.argument('dest', type=click.Path())
+def download(ctx, source, dest):
+    """Command line interface for downloading files."""
+    muse_gdrive.download(ctx.obj['GOOGLE_DRIVE'], source, dest)
+
+
+@click.command()
+@click.pass_context
+@click.argument('path', type=click.Path())
+def delete(ctx, path):
+    """Command line interface for deleting files."""
+    muse_gdrive.delete(ctx.obj['GOOGLE_DRIVE'], path)
+
+
+@click.command()
+@click.pass_context
+@click.argument('path', type=click.Path())
+def list_files(ctx, path):
+    """Command line interface for listing files."""
+    for filename in muse_gdrive.list_files(ctx.obj['GOOGLE_DRIVE'], path):
+        click.echo(filename)
+
+
+def main():
+    """Parses the command line and performs the requested Google Drive
+    action."""
+    cli.add_command(make_directory, 'mkdir')
+    cli.add_command(upload, 'put')
+    cli.add_command(download, 'get')
+    cli.add_command(delete, 'rm')
+    cli.add_command(list_files, 'ls')
+
+    # Pylint seems to choke on the Click decorators, so just disable the
+    # warnings for this one line.
+    # pylint: disable=no-value-for-parameter
+    # pylint: disable=unexpected-keyword-arg
+    cli(obj={})
+    # pylint: enable=no-value-for-parameter
+    # pylint: enable=unexpected-keyword-arg
+
+
+if __name__ == '__main__':
+    main()
