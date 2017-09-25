@@ -18,7 +18,7 @@ before_install:
   -d
 - tar xf travis_secrets.tar
 - chmod 0600 travis_github_deploy_key
-- mv travis_github_deploy_key ~/.ssh/id_rsa
+- cp travis_github_deploy_key ~/.ssh/id_rsa
 script:
 - python setup.py install
 - make pre-commit
